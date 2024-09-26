@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const wasteData = require('./wasteData');
+const AT = require("africastalking")({ apiKey: "", username: "" });
 
+const sms = AT.SMS; // SMS service
 const sessionState = {};
 const leaderboard = []; // Track users based on collected waste
 
@@ -46,8 +48,14 @@ router.post("/", (req, res) => {
         userState.step = 0;
         break;
       case "4":
-        response = `END 🌱 Eco-friendly Tip: Reduce single-use plastics by carrying reusable shopping bags. Every small action counts!`;
+        const tip = "🌱 Eco-friendly Tip: Reduce single-use plastics by carrying reusable shopping bags.";
+        response = `END ${tip}`;
         userState.step = 0;
+
+        // Send Eco-friendly tip via SMS
+        sms.send({ to: [phoneNumber], message: tip })
+          .then(() => console.log(`SMS sent to ${phoneNumber}: ${tip}`)) // Log success
+          .catch(error => console.error(`Failed to send SMS to ${phoneNumber}:`, error)); // Log error
         break;
       case "5":
         response = "CON 🎁 Incentives & Rewards:\n";
@@ -97,7 +105,14 @@ router.post("/", (req, res) => {
       leaderboard.push({ phoneNumber: phoneNumber, totalWaste: userState.data.quantity });
     }
 
-    response = `END ✅ Waste registered successfully!\nWaste ID: ${wasteId}\nYou'll be contacted soon for pickup.\nYou have earned KES ${userState.data.quantity * 2} as an incentive! 🎉`;
+    // Send waste registration SMS
+    const pickupTimeMessage = "Based on your location, it will take approximately 10 minutes for pickup.";
+    const registrationMessage = `✅ Waste registered successfully!\nWaste ID: ${wasteId}\nYou'll be contacted soon for pickup.\nYou have earned KES ${userState.data.quantity * 2} as an incentive! 🎉\n${pickupTimeMessage}`;
+    sms.send({ to: [phoneNumber], message: registrationMessage })
+      .then(() => console.log(`SMS sent to ${phoneNumber}: ${registrationMessage}`)) // Log success
+      .catch(error => console.error(`Failed to send SMS to ${phoneNumber}:`, error)); // Log error
+
+    response = `END ${registrationMessage}`;
     userState.step = 0;
     userState.subStep = 0;
   } 
